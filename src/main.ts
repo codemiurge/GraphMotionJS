@@ -1,23 +1,51 @@
+///////////////////////////////////////////////////////////////////
+// GraphMotionJS v0.3.0 — Multi-node support + JSON-based graph loading
+///////////////////////////////////////////////////////////////////
+
+
+import type { Node, Edge } from "./types";
+
 const graph = document.querySelector<HTMLDivElement>(".graph")!;
-const circle = document.querySelector<HTMLDivElement>(".node")!;
+const nodesContainer = document.querySelector<HTMLDivElement>(".nodes")!;
 
-type Node = {
-    x: number;
-    y: number;
-    vx: number;
-    vy: number;
-};
+const response = await fetch("/graphNodes.json");
+if (!response.ok) {
+    throw new Error(`Failed to load vertexes.json: ${response.status}`);
+}
+const graphData = await response.json();
 
-const currentNode: Node = {
-    x: 100,
-    y: 100,
-    vx: 0,
-    vy: 0
-};
+// Map storing the [node.id, node div] pair, 
+// used for DOM-interactions such as style.classlist.add or style.transform
+const nodeElements = new Map<string, HTMLDivElement>();
+
+// Appending graphData nodes to HTML and stuffing nodeElements with nodes
+for (let i = 0; i < graphData.nodes.length; i++){
+    const node = graphData.nodes[i];
+
+    const div = document.createElement("div");
+    div.classList.add("node");
+    div.innerHTML = `<span class="nodeLabel">${node.label}</span>`;
+    
+    nodesContainer.appendChild(div);
+    nodeElements.set(node.id, div)
+
+    // Adding event listeners
+    div.addEventListener("pointerdown", (event) => {
+        startDrag(event, node);
+    });
+
+    div.addEventListener("pointermove", (event) => {
+        dragging(event, node);
+    });
+
+    div.addEventListener("pointerup", (event) => {
+        stopDrag(event, node);
+    });
+}
 
 const damping = 0.95;
 
-let isDragging = false;
+let draggedNode: Node | null = null;
 
 // Offset for the vertice "sprite" position - where in local vertex coordinates the click was
 let dragOffsetX = 0;
@@ -38,69 +66,75 @@ function getPointerPosLocalGraph(event: PointerEvent): {
     };
 }
 
-function startDrag(event: PointerEvent): void {
-    isDragging = true;
-    circle.classList.add("grabbed");
+function startDrag(event: PointerEvent, node: Node): void {
+    const nodeDiv = nodeElements.get(node.id)!;
+    nodeDiv.classList.add("grabbed");
 
-    circle.setPointerCapture(event.pointerId);
+    draggedNode = node;
+
+    nodeDiv.setPointerCapture(event.pointerId);
     const pointer = getPointerPosLocalGraph(event);
 
     // The vertex shouldn't be dragged by the top-left corner all the time
-    dragOffsetX = pointer.x - currentNode.x;
-    dragOffsetY = pointer.y - currentNode.y;
+    dragOffsetX = pointer.x - node.x;
+    dragOffsetY = pointer.y - node.y;
 
     lastMouseX = pointer.x;
     lastMouseY = pointer.y;
 
     // Stopping the inertia
-    currentNode.vx = 0;
-    currentNode.vy = 0;
+    node.vx = 0;
+    node.vy = 0;
 }
 
-function dragging(event: PointerEvent): void {
-    if (!isDragging) {
+function dragging(event: PointerEvent, node: Node): void {
+    if (!draggedNode) {
         return;
     }
 
     const pointer = getPointerPosLocalGraph(event);
 
-    currentNode.x = pointer.x - dragOffsetX;
-    currentNode.y = pointer.y - dragOffsetY;
+    node.x = pointer.x - dragOffsetX;
+    node.y = pointer.y - dragOffsetY;
 
-    currentNode.vx = pointer.x - lastMouseX;;
-    currentNode.vy = pointer.y - lastMouseY;
+    node.vx = pointer.x - lastMouseX;
+    node.vy = pointer.y - lastMouseY;
 
     lastMouseX = pointer.x;
     lastMouseY = pointer.y;
 }
 
-function stopDrag(event: PointerEvent): void {
-    circle.classList.remove("grabbed");
+// Note: There could be div instead of Node, though
+function stopDrag(event: PointerEvent, node: Node): void {
+    const nodeDiv = nodeElements.get(node.id)!;
+    nodeDiv.classList.remove("grabbed");
 
-    isDragging = false;
+    draggedNode = null;
 
-    if (circle.hasPointerCapture(event.pointerId)) {
-        circle.releasePointerCapture(event.pointerId);
+    if (nodeDiv.hasPointerCapture(event.pointerId)) {
+        nodeDiv.releasePointerCapture(event.pointerId);
     }
 }
 
 function updatePosition(): void {
-    if (!isDragging) {
-        currentNode.x += currentNode.vx;
-        currentNode.y += currentNode.vy;
+    for(let i = 0; i < graphData.nodes.length; i++) {
+        const node = graphData.nodes[i]
 
-        currentNode.vx *= damping;
-        currentNode.vy *= damping;
+        // If this node is not the dragged one, let it continue to slide
+        if (draggedNode != node) {
+            node.x += node.vx;
+            node.y += node.vy;
+            
+            // TODO: if 2 nodes have collided, vx *= -1 and so does vy
+            node.vx *= damping;
+            node.vy *= damping;
+        }
+    
+        nodeElements.get(node.id)!.style.transform =
+            `translate(${node.x}px, ${node.y}px)`;
+
     }
-
-    circle.style.transform =
-        `translate(${currentNode.x}px, ${currentNode.y}px)`;
-
     requestAnimationFrame(updatePosition);
 }
-
-circle.addEventListener("pointerdown", startDrag);
-circle.addEventListener("pointermove", dragging);
-circle.addEventListener("pointerup", stopDrag);
 
 updatePosition();

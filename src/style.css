@@ -3,11 +3,24 @@ svg{
 }
 
 .node{
-     background-color: black;
-     height: 50px;
-     width: 50px;
+     position: absolute;
+     background-color: rgb(204, 204, 204);
+
+     height: 30px;
+     width: 30px;
+     
+     border: 2px solid blue;
      border-radius: 50%;
      cursor:grab;
+}
+
+.nodeLabel{
+     position: relative;
+     top: -18px;
+     left: 5px;
+
+     user-select: none;
+     pointer-events: none;
 }
 
 .grabbed{
