@@ -10,6 +10,7 @@ export type Node = {
 }
 
 export type Edge = {
+    id: string,
     from: string,
     to: string,
 };

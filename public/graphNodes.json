@@ -1,4 +1,8 @@
 {
+    "settings": {
+        "nodeSize": 25,
+        "edgeThickness":1
+    },
     "nodes": [
         {
             "id": "js",
@@ -23,16 +27,55 @@
             "y": 250,
             "vx": 0,
             "vy": 0
+        },
+        {
+            "id": "css",
+            "label": "CSS",
+            "x": 300,
+            "y": 350,
+            "vx": 0,
+            "vy": 0
+        },
+        {
+            "id": "html",
+            "label": "HTML",
+            "x": 500,
+            "y": 150,
+            "vx": 0,
+            "vy": 0
         }
     ],
     "edges": [
-        {
+        {   
+            "id": "1",
             "from": "js",
             "to": "react"
         },
         {
+            "id": "2",
             "from": "js",
             "to": "ts"
+        },
+        {   
+            "id": "3",
+            "from": "js",
+            "to": "html"
+        },
+        {
+            "id": "4",
+            "from": "html",
+            "to": "css"
+        },
+        {   
+            "id": "5",
+            "from": "ts",
+            "to": "html"
+        },
+        {
+            "id": "6",
+            "from": "css",
+            "to": "react"
         }
+
     ]
 }
