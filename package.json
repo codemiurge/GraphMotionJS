@@ -11,5 +11,9 @@
   "devDependencies": {
     "typescript": "~6.0.2",
     "vite": "^8.2.0"
+  },
+  "dependencies": {
+    "sass": "^1.103.1",
+    "scss": "^0.2.4"
   }
 }

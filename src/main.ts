@@ -1,14 +1,24 @@
 ///////////////////////////////////////////////////////////////////////////////////
-// GraphMotionJS v0.4.2 - Edges support + node highlight on hover 
-//  + label support + node inertia stop using a debounce timer
+// GraphMotionJS v0.4.3 - Zoom support
 ///////////////////////////////////////////////////////////////////////////////////
 
+import "./style.scss";
 import type { Node, Edge } from "./types";
 
 const graph = document.querySelector<HTMLDivElement>(".graph")!;
-const nodesContainer = document.querySelector<HTMLDivElement>(".nodes")!;
 
+// Zoom settings
+const world = document.querySelector<HTMLDivElement>(".world")!;
+let zoom = 1.0;
+const minZoom = 0.8;
+const maxZoom = 1.5;
+const zoomStep = 0.05;
+let zoomOriginX = 0;
+let zoomOriginY = 0;
+
+const nodesContainer = document.querySelector<HTMLDivElement>(".nodes")!;
 const edgesContainer = document.querySelector<SVGSVGElement>(".edges")!;
+
 const SVG_NS = "http://www.w3.org/2000/svg";
 
 const response = await fetch("/graphNodes.json");
@@ -145,15 +155,11 @@ let dragOffsetY = 0;
 let lastMouseX = 0;
 let lastMouseY = 0;
 
-function getPointerPosLocalGraph(event: PointerEvent): {
-    x: number;
-    y: number;
-} {
+function pointerPosToGraphLocalPos(event: PointerEvent | WheelEvent): { x: number; y: number; } {
     const graphRect = graph.getBoundingClientRect();
-
     return {
-        x: event.clientX - graphRect.left,
-        y: event.clientY - graphRect.top
+        x: (event.clientX - graphRect.left) / zoom,
+        y: (event.clientY - graphRect.top) / zoom
     };
 }
 
@@ -164,7 +170,7 @@ function startDrag(event: PointerEvent, node: Node): void {
     draggedNode = node;
 
     nodeContainerDiv.setPointerCapture(event.pointerId);
-    const pointer = getPointerPosLocalGraph(event);
+    const pointer = pointerPosToGraphLocalPos(event);
 
     // The vertex shouldn't be dragged by the top-left corner all the time
     dragOffsetX = pointer.x - node.x;
@@ -185,7 +191,7 @@ function dragging(event: PointerEvent, node: Node): void {
         return;
     }
 
-    const pointer = getPointerPosLocalGraph(event);
+    const pointer = pointerPosToGraphLocalPos(event);
 
     node.x = pointer.x - dragOffsetX;
     node.y = pointer.y - dragOffsetY;
@@ -204,7 +210,6 @@ function dragging(event: PointerEvent, node: Node): void {
     }, 80);
 }
 
-// Note: There could be div instead of Node, though
 function stopDrag(event: PointerEvent, node: Node): void {
     const nodeContainerDiv = nodeContainerDivs.get(node.id)!;
     nodeContainerDiv.classList.remove("grabbed");
@@ -217,21 +222,43 @@ function stopDrag(event: PointerEvent, node: Node): void {
     if (pointerStopTimer !== null) { clearTimeout(pointerStopTimer)}
 }
 
+function highlightNode(node: Node){
+    const lines = nodeEdges.get(node.id);
+    if (!lines) throw Error(`No edges found for node ${node.id}`);
+
+    for (const line of lines) {
+        line.classList.add("highlighted");
+    }
+}
+
+function unHighlightNode(node: Node){
+    const lines = nodeEdges.get(node.id);
+    if (!lines) throw Error(`No edges found for node ${node.id}`);
+
+    for (const line of lines) {
+        line.classList.remove("highlighted");
+    }
+}
+//#endregion
+
+/////////////////////////
+// #region UPDATE SECTION
+/////////////////////////
+
 function updatePosition(): void {
     for(let i = 0; i < graphData.nodes.length; i++) {
         const node = graphData.nodes[i]
 
-        // If this node is not the dragged one, let it continue to slide
+        // If this node is not the dragged one, let it slide
         if (draggedNode != node) {
             node.x += node.vx;
             node.y += node.vy;
             
-            // TODO: if 2 nodes have collided, vx *= -1 and so does vy
             node.vx *= damping;
             node.vy *= damping;
         }
         
-        // Manipulating the styles of node
+        // Hangling node's position
         const nodeContainerDiv = nodeContainerDivs.get(node.id);
         if (!nodeContainerDiv) throw Error(`No divs for node id=${node.id}`);
 
@@ -269,24 +296,34 @@ function updatePosition(): void {
     requestAnimationFrame(updatePosition);
 }
 
-function highlightNode(node: Node){
-    const lines = nodeEdges.get(node.id);
-    if (!lines) throw Error(`No edges found for node ${node.id}`);
-
-    for (const line of lines) {
-        line.classList.add("highlighted");
-    }
-}
-
-function unHighlightNode(node: Node){
-    const lines = nodeEdges.get(node.id);
-    if (!lines) throw Error(`No edges found for node ${node.id}`);
-
-    for (const line of lines) {
-        line.classList.remove("highlighted");
-    }
-}
-
 updatePosition();
+
+//#endregion
+
+/////////////////////////
+// #region ZOOM SECTION
+/////////////////////////
+
+graph.addEventListener("wheel", (e) =>{
+        e.preventDefault();
+
+        // In-graph local pointer 
+        const localPointer = pointerPosToGraphLocalPos(e);
+
+        // Move 10% of the distance towards the pointer instead of jumping to it
+        if (minZoom < zoom && zoom < maxZoom){
+            zoomOriginX += (localPointer.x - zoomOriginX) * 0.10;
+            zoomOriginY += (localPointer.y - zoomOriginY) * 0.10;
+            world.style.transformOrigin = `${zoomOriginX}px ${zoomOriginY}px`;
+        }
+
+                                
+        zoom += e.deltaY < 0 ? zoomStep : -zoomStep;
+        zoom = Math.max(minZoom, Math.min(zoom, maxZoom));
+
+        world.style.transform = `scale(${zoom})`;
+        
+})
+
 
 //#endregion
