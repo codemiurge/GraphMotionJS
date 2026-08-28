@@ -11,9 +11,9 @@ const edgesContainer = document.querySelector<SVGSVGElement>(".edges")!;
 
 const SVG_NS = "http://www.w3.org/2000/svg"; // Is used for createElementNS
 
-const response = await fetch("/net graph.json");
+const response = await fetch(`${import.meta.env.BASE_URL}net graph.json`);
 if (!response.ok) {
-    throw new Error(`Failed to load graphNodes.json: ${response.status}`);
+    throw new Error(`Failed to load json: ${response.status}`);
 }
 const graphData = await response.json();
 
