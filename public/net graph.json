@@ -1,0 +1,36 @@
+{
+  "settings": {"nodeSize": 25, "edgeThickness": 2},
+  "nodes": [
+    {"id": "a", "label": "A", "x": 350, "y": 250, "vx": 0, "vy": 0},
+    {"id": "b", "label": "B", "x": 500, "y": 250, "vx": 0, "vy": 0},
+    {"id": "c", "label": "C", "x": 650, "y": 250, "vx": 0, "vy": 0},
+    {"id": "d", "label": "D", "x": 800, "y": 250, "vx": 0, "vy": 0},
+    {"id": "e", "label": "E", "x": 350, "y": 400, "vx": 0, "vy": 0},
+    {"id": "f", "label": "F", "x": 500, "y": 400, "vx": 0, "vy": 0},
+    {"id": "g", "label": "G", "x": 650, "y": 400, "vx": 0, "vy": 0},
+    {"id": "h", "label": "H", "x": 800, "y": 400, "vx": 0, "vy": 0},
+    {"id": "i", "label": "I", "x": 350, "y": 550, "vx": 0, "vy": 0},
+    {"id": "j", "label": "J", "x": 500, "y": 550, "vx": 0, "vy": 0},
+    {"id": "k", "label": "K", "x": 650, "y": 550, "vx": 0, "vy": 0},
+    {"id": "l", "label": "L", "x": 800, "y": 550, "vx": 0, "vy": 0}
+  ],
+  "edges": [
+    {"id": "1", "from": "a", "to": "b"},
+    {"id": "2", "from": "b", "to": "c"},
+    {"id": "3", "from": "c", "to": "d"},
+    {"id": "4", "from": "e", "to": "f"},
+    {"id": "5", "from": "f", "to": "g"},
+    {"id": "6", "from": "g", "to": "h"},
+    {"id": "7", "from": "i", "to": "j"},
+    {"id": "8", "from": "j", "to": "k"},
+    {"id": "9", "from": "k", "to": "l"},
+    {"id": "10", "from": "a", "to": "e"},
+    {"id": "11", "from": "b", "to": "f"},
+    {"id": "12", "from": "c", "to": "g"},
+    {"id": "13", "from": "d", "to": "h"},
+    {"id": "14", "from": "e", "to": "i"},
+    {"id": "15", "from": "f", "to": "j"},
+    {"id": "16", "from": "g", "to": "k"},
+    {"id": "17", "from": "h", "to": "l"}
+  ]
+}

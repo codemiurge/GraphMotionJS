@@ -1,14 +1,23 @@
 ///////////////////////////////////////////////////////////////////////////////////
-// GraphMotionJS v0.4.3 - Zoom support
+// GraphMotionJS v1.0.0 - Force-directed graph model (node collision + spring physics)
 ///////////////////////////////////////////////////////////////////////////////////
 
 import "./style.scss";
 import type { Node, Edge } from "./types";
 
 const graph = document.querySelector<HTMLDivElement>(".graph")!;
+const nodesContainer = document.querySelector<HTMLDivElement>(".nodes")!;
+const edgesContainer = document.querySelector<SVGSVGElement>(".edges")!;
+
+const SVG_NS = "http://www.w3.org/2000/svg"; // Is used for createElementNS
+
+const response = await fetch("/net graph.json");
+if (!response.ok) {
+    throw new Error(`Failed to load graphNodes.json: ${response.status}`);
+}
+const graphData = await response.json();
 
 // Zoom settings
-const world = document.querySelector<HTMLDivElement>(".world")!;
 let zoom = 1.0;
 const minZoom = 0.8;
 const maxZoom = 1.5;
@@ -16,16 +25,19 @@ const zoomStep = 0.05;
 let zoomOriginX = 0;
 let zoomOriginY = 0;
 
-const nodesContainer = document.querySelector<HTMLDivElement>(".nodes")!;
-const edgesContainer = document.querySelector<SVGSVGElement>(".edges")!;
+// Physics settings
+const world = document.querySelector<HTMLDivElement>(".world")!;
+const worldWidth = world.offsetWidth;
+const worldHeight = world.offsetHeight;
 
-const SVG_NS = "http://www.w3.org/2000/svg";
+const nodeSize = graphData.settings.nodeSize;
+const nodeRadius = graphData.settings.nodeSize / 2;
+const airDamping = 0.85;
 
-const response = await fetch("/graphNodes.json");
-if (!response.ok) {
-    throw new Error(`Failed to load graphNodes.json: ${response.status}`);
-}
-const graphData = await response.json();
+const springLength = 150;
+const springStrength = 0.005;
+const maxSpringLengthThreshold = 250;  // Distance after which the spring force increases
+const excessSpringStrength = 0.008;
 
 ///////////////////////
 // #region NODE (VERTEX) SECTION
@@ -144,8 +156,6 @@ for (let i = 0; i < graphData.edges.length; i++) {
 //#region MAIN SECTION
 /////////////////////
 
-const damping = 0.95;
-
 let draggedNode: Node | null = null;
 
 // Offset for the vertice "sprite" position - where in local vertex coordinates the click was
@@ -241,30 +251,96 @@ function unHighlightNode(node: Node){
 }
 //#endregion
 
-/////////////////////////
-// #region UPDATE SECTION
-/////////////////////////
+/////////////////////////////////////
+// #region UPDATE & PHYSICS SECTION
+/////////////////////////////////////
 
-function updatePosition(): void {
+function handleNodeCollisions(): void {
+    for (let i = 0; i < graphData.nodes.length; i++) {
+        for (let j = i + 1; j < graphData.nodes.length; j++) {
+            const nodeA = graphData.nodes[i];
+            const nodeB = graphData.nodes[j];
+
+            let dx = nodeB.x - nodeA.x;
+            let dy = nodeB.y - nodeA.y;
+
+            let distance = Math.sqrt(dx*dx + dy*dy);
+
+            if (distance >=  nodeSize) continue;
+
+            // If A is fully overlaping B
+            if (distance === 0) {
+                dx = 1;
+                dy = 0;
+                distance = 1;
+            }
+
+            const overlap = nodeSize - distance;
+
+            const nx = dx / distance;
+            const ny = dy / distance;
+
+            nodeA.x -= nx * overlap / 2;
+            nodeA.y -= ny * overlap / 2;
+  
+            nodeB.x += nx * overlap / 2;
+            nodeB.y += ny * overlap / 2;
+        }
+    }
+}
+
+function onUpdate(): void {
+    
+    handleNodeCollisions()
+    // Updating the nodes
     for(let i = 0; i < graphData.nodes.length; i++) {
         const node = graphData.nodes[i]
 
         // If this node is not the dragged one, let it slide
         if (draggedNode != node) {
+
+            // Inertia of that node
             node.x += node.vx;
             node.y += node.vy;
-            
-            node.vx *= damping;
-            node.vy *= damping;
+
+            // Air-resistance
+            node.vx *= airDamping;
+            node.vy *= airDamping;
+        }
+
+        // Checking collisions with viewport bounds
+        // Viewport left
+        if (node.x < nodeRadius) {
+            node.x = nodeRadius;
+            node.vx *= -1;
+        }
+
+        //Viewport right
+        if (node.x > worldWidth - nodeRadius) {
+            node.x = worldWidth - nodeRadius;
+            node.vx *= -1;
+        }
+
+        //Viewport top
+        if (node.y < nodeRadius) {
+            node.y = nodeRadius;
+            node.vy *= -1;
+        }
+
+        // Viewport bottom
+        if (node.y > worldHeight - nodeRadius) {
+            node.y = worldHeight - nodeRadius;
+            node.vy *= -1;
         }
         
-        // Hangling node's position
+        // Handle node's position
         const nodeContainerDiv = nodeContainerDivs.get(node.id);
         if (!nodeContainerDiv) throw Error(`No divs for node id=${node.id}`);
 
         nodeContainerDiv.style.left = `${node.x}px`;
         nodeContainerDiv.style.top = `${node.y}px`;
     }
+    
 
     // Updating the edges
     for (let i=0; i < graphData.edges.length; i++){
@@ -291,12 +367,42 @@ function updatePosition(): void {
         line.setAttribute("y1", String(fromNode.y))
         line.setAttribute("x2", String(toNode.x))
         line.setAttribute("y2", String(toNode.y))
+
+        // Force-directed graph model
+        const dx = toNode.x - fromNode.x;
+        const dy = toNode.y - fromNode.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        // Avoid division by zero if two connected nodes overlap completely
+        if (distance === 0) {
+            continue;
+        }
+
+        const displacement = distance - springLength;
+
+        // Unit vector for dx and dy
+        const nx = dx / distance;
+        const ny = dy / distance;
+
+        let force = displacement * springStrength;
+
+
+        if (distance > maxSpringLengthThreshold) {
+            const excess = distance - maxSpringLengthThreshold;
+            force += excess * excessSpringStrength;
+        }
+
+        fromNode.vx += force * nx;
+        fromNode.vy += force * ny;
+
+        toNode.vx -= force * nx;
+        toNode.vy -= force * ny;
     }
 
-    requestAnimationFrame(updatePosition);
+    requestAnimationFrame(onUpdate);
 }
 
-updatePosition();
+onUpdate();
 
 //#endregion
 

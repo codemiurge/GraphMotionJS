@@ -1,0 +1,27 @@
+{
+  "settings": {"nodeSize": 25, "edgeThickness": 2},
+  "nodes": [
+    {"id": "root", "label": "Root", "x": 600, "y": 100, "vx": 0, "vy": 0},
+    {"id": "a", "label": "A", "x": 450, "y": 250, "vx": 0, "vy": 0},
+    {"id": "b", "label": "B", "x": 750, "y": 250, "vx": 0, "vy": 0},
+    {"id": "c", "label": "C", "x": 350, "y": 400, "vx": 0, "vy": 0},
+    {"id": "d", "label": "D", "x": 550, "y": 400, "vx": 0, "vy": 0},
+    {"id": "e", "label": "E", "x": 650, "y": 400, "vx": 0, "vy": 0},
+    {"id": "f", "label": "F", "x": 850, "y": 400, "vx": 0, "vy": 0},
+    {"id": "g", "label": "G", "x": 250, "y": 550, "vx": 0, "vy": 0},
+    {"id": "h", "label": "H", "x": 450, "y": 550, "vx": 0, "vy": 0},
+    {"id": "i", "label": "I", "x": 750, "y": 550, "vx": 0, "vy": 0},
+    {"id": "j", "label": "J", "x": 950, "y": 550, "vx": 0, "vy": 0}
+  ],
+  "edges": [
+    
+    {"id": "3", "from": "a", "to": "c"},
+    {"id": "4", "from": "a", "to": "d"},
+    {"id": "5", "from": "b", "to": "e"},
+    {"id": "6", "from": "b", "to": "f"},
+    {"id": "7", "from": "c", "to": "g"},
+    {"id": "8", "from": "c", "to": "h"},
+    {"id": "9", "from": "f", "to": "i"},
+    {"id": "10", "from": "f", "to": "j"}
+  ]
+}
